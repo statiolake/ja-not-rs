@@ -159,8 +159,70 @@ fn change_negative_to_affirmative(mut morphs: Vec<M>) -> String {
     }
 }
 
-fn change_affirmative_to_negative(_morphs: Vec<M>) -> String {
-    unimplemented!()
+fn change_affirmative_to_negative(mut morphs: Vec<M>) -> String {
+    match morphs.pop() {
+        Some(M {
+            wordclass: W::AuxiliaryVerb,
+            basic: "です",
+            ..
+        }) => match morphs.pop() {
+            Some(M {
+                wordclass: W::Adjective(_),
+                surface,
+                conjugation: C { kind, form },
+                ..
+            }) => {
+                morphs_to_string(&morphs)
+                    + &conjugation::convert(surface, kind, form, F::Continuous)
+                        .expect("failed to convert to continuous")
+                    + "ありません"
+            }
+            Some(M { surface, .. }) => {
+                morphs_to_string(&morphs) + surface + "ではありません"
+            }
+            None => "ではありません".to_string(),
+        },
+        Some(M {
+            wordclass: W::AuxiliaryVerb,
+            basic: "ます",
+            ..
+        }) => match morphs.pop() {
+            Some(M {
+                surface,
+                conjugation: C { kind, form },
+                ..
+            }) => {
+                morphs_to_string(&morphs)
+                    + &conjugation::convert(surface, kind, form, F::Continuous)
+                        .expect("failed to convert to continuous")
+                    + "ません"
+            }
+            None => "ません".to_string(),
+        },
+        Some(M {
+            wordclass: W::AuxiliaryVerb,
+            basic: "た",
+            ..
+        }) => match morphs.pop() {
+            Some(M {
+                wordclass: W::AuxiliaryVerb,
+                basic: "です",
+                ..
+            }) => morphs_to_string(&morphs) + "ではありませんでした",
+            Some(M {
+                wordclass: W::AuxiliaryVerb,
+                basic: "ます",
+                ..
+            }) => match morphs.pop() {
+                Some(M { surface, .. }) => {
+                    morphs_to_string(&morphs) + surface + "ませんでした"
+                }
+                None => "ませんでした".to_string(),
+            },
+            _ => unreachable!(),
+        },
+        _ => unreachable!(),
+    }
 }
 
 fn morphs_to_string(morphs: &[M]) -> String {
@@ -243,15 +305,20 @@ mod tests {
 
     check! {
         [neg -> aff]
-            basic1 >> "寒くないです" => "寒いです",
-            basic2 >> "寒くありません" => "寒いです",
-            basic3 >> "寒くはありません" => "寒くはあります",
-            adverb1 >> "静かではありません" => "静かです",
-            adverb2 >> "静かじゃありません" => "静かです",
-            verb1 >> "読みません" => "読みます",
-            verb2 >> "読んでいません" => "読んでいます",
-            verb3 >> "読んでいませんでした" => "読んでいました",
+            na_basic1 >> "寒くないです" => "寒いです",
+            na_basic2 >> "寒くありません" => "寒いです",
+            na_basic3 >> "寒くはありません" => "寒くはあります",
+            na_adverb1 >> "静かではありません" => "静かです",
+            na_adverb2 >> "静かじゃありません" => "静かです",
+            na_verb1 >> "読みません" => "読みます",
+            na_verb2 >> "読んでいません" => "読んでいます",
+            na_verb3 >> "読んでいませんでした" => "読んでいました",
 
         [aff -> neg]
+            an_basic2 >> "寒いです" =>  "寒くありません",
+            an_adverb1 >> "静かです" =>  "静かではありません",
+            an_verb1 >> "読みます" =>  "読みません",
+            an_verb2 >> "読んでいます" =>  "読んでいません",
+            an_verb3 >> "読んでいました" =>  "読んでいませんでした",
     }
 }
