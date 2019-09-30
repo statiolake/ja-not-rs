@@ -1,4 +1,4 @@
-use typed_igo::conjugation::ConjugationForm as F;
+use typed_igo::conjugation::{ConjugationForm as F, ConjugationKind as K};
 use typed_igo::{Conjugation as C, Morpheme as M, Parser, WordClass as W};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -177,10 +177,12 @@ fn change_affirmative_to_negative(mut morphs: Vec<M>) -> String {
                     conjugation: C { kind, form },
                     ..
                 }) => {
-                    morphs_to_string(&morphs)
-                        + &conjugation::convert(surface, kind, form, F::ContinuousTe)
-                            .expect("failed to convert to continuous")
-                        + "ありませんでした"
+                    let converted = match kind {
+                        K::AdjectiveII => "よく".into(),
+                        _ => conjugation::convert(surface, kind, form, F::ContinuousTe)
+                            .expect("failed to convert to continuous"),
+                    };
+                    morphs_to_string(&morphs) + &converted + "ありませんでした"
                 }
                 Some(M { surface, .. }) => {
                     morphs_to_string(&morphs) + surface + "ありませんでした"
@@ -193,10 +195,12 @@ fn change_affirmative_to_negative(mut morphs: Vec<M>) -> String {
                 conjugation: C { kind, form },
                 ..
             }) => {
-                morphs_to_string(&morphs)
-                    + &conjugation::convert(surface, kind, form, F::ContinuousTe)
-                        .expect("failed to convert to continuous")
-                    + "ありません"
+                let converted = match kind {
+                    K::AdjectiveII => "よく".into(),
+                    _ => conjugation::convert(surface, kind, form, F::ContinuousTe)
+                        .expect("failed to convert to continuous"),
+                };
+                morphs_to_string(&morphs) + &converted + "ありません"
             }
             Some(M { surface, .. }) => {
                 morphs_to_string(&morphs) + surface + "ではありません"
@@ -335,6 +339,7 @@ mod tests {
             na_verb1 >> "読みません" => "読みます",
             na_verb2 >> "読んでいません" => "読んでいます",
             na_verb3 >> "読んでいませんでした" => "読んでいました",
+            na_ii >> "よくないです" => "よいです",
 
         [aff -> neg]
             an_noun >> "Aです" => "Aではありません",
@@ -344,5 +349,6 @@ mod tests {
             an_verb1 >> "読みます" =>  "読みません",
             an_verb2 >> "読んでいます" =>  "読んでいません",
             an_verb3 >> "読んでいました" =>  "読んでいませんでした",
+            an_ii >> "いいです" => "よくありません",
     }
 }
