@@ -167,13 +167,34 @@ fn change_affirmative_to_negative(mut morphs: Vec<M>) -> String {
             ..
         }) => match morphs.pop() {
             Some(M {
+                wordclass: W::AuxiliaryVerb,
+                basic: "た",
+                ..
+            }) => match morphs.pop() {
+                Some(M {
+                    wordclass: W::Adjective(_),
+                    surface,
+                    conjugation: C { kind, form },
+                    ..
+                }) => {
+                    morphs_to_string(&morphs)
+                        + &conjugation::convert(surface, kind, form, F::ContinuousTe)
+                            .expect("failed to convert to continuous")
+                        + "ありませんでした"
+                }
+                Some(M { surface, .. }) => {
+                    morphs_to_string(&morphs) + surface + "ありませんでした"
+                }
+                None => "ありませんでした".to_string(),
+            },
+            Some(M {
                 wordclass: W::Adjective(_),
                 surface,
                 conjugation: C { kind, form },
                 ..
             }) => {
                 morphs_to_string(&morphs)
-                    + &conjugation::convert(surface, kind, form, F::Continuous)
+                    + &conjugation::convert(surface, kind, form, F::ContinuousTe)
                         .expect("failed to convert to continuous")
                     + "ありません"
             }
@@ -297,7 +318,7 @@ mod tests {
             $(
                 #[test]
                 fn $anname() {
-                    assert_eq!(ja_not_for_polite(&*PARSER, $anb), $ana);
+                    assert_eq!(ja_not_for_polite(&*PARSER, $ana), $anb);
                 }
             )*
         }
@@ -317,8 +338,9 @@ mod tests {
 
         [aff -> neg]
             an_noun >> "Aです" => "Aではありません",
-            an_basic2 >> "寒いです" =>  "寒くありません",
-            an_adverb1 >> "静かです" =>  "静かではありません",
+            an_adj1 >> "寒いです" => "寒くありません",
+            an_adj2 >> "寒かったです" => "寒くありませんでした",
+            an_adverb1 >> "静かです" => "静かではありません",
             an_verb1 >> "読みます" =>  "読みません",
             an_verb2 >> "読んでいます" =>  "読んでいません",
             an_verb3 >> "読んでいました" =>  "読んでいませんでした",
